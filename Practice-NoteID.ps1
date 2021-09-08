@@ -1,6 +1,7 @@
 ﻿<# Script settings:
     DIFFICULTY - How long each note lasts (W,H,Q,E,S)
     INTERVAL - How much time between each loop (Seconds)
+    DIAGRAMS - Whether or not to show note on staff each time
 #>
 Param
 (
@@ -10,26 +11,32 @@ Param
 
     [Parameter(Mandatory)]
     [int]
-    $Interval
+    $Interval,
+
+    [Parameter()]
+    [bool]
+    $Diagrams = $False
 )
 
-# Initialize variables, forms and picture objects
-$NoteDuration = "W"
-[reflection.assembly]::LoadWithPartialName("System.Windows.Forms")
-$Form = New-Object system.Windows.Forms.Form
-$pictureBox = new-object Windows.Forms.PictureBox
+If ($Diagrams) {
+    # Initialize variables, forms and picture objects
+    $NoteDuration = "W"
+    [reflection.assembly]::LoadWithPartialName("System.Windows.Forms")
+    $Form = New-Object system.Windows.Forms.Form
+    $pictureBox = new-object Windows.Forms.PictureBox
 
-[System.Windows.Forms.Application]::EnableVisualStyles();
-$pictureBox.Location = New-Object System.Drawing.Size(0,1)
-$staticSize = New-Object System.Drawing.Size(275,275)
+    [System.Windows.Forms.Application]::EnableVisualStyles();
+    $pictureBox.Location = New-Object System.Drawing.Size(0,1)
+    $staticSize = New-Object System.Drawing.Size(275,275)
 
-$pictureBox.Size = $staticSize
-$Form.Location = $staticSize
-$Form.Size = $staticSize
-$Form.StartPosition = "Manual"
-$Form.Visible = $false
-$Form.Enabled = $true
-$Form.Add_Shown({$Form.Activate()})
+    $pictureBox.Size = $staticSize
+    $Form.Location = $staticSize
+    $Form.Size = $staticSize
+    $Form.StartPosition = "Manual"
+    $Form.Visible = $false
+    $Form.Enabled = $true
+    $Form.Add_Shown({$Form.Activate()})
+}
 
 switch ($Difficulty)
 {
@@ -51,22 +58,24 @@ While ($true) {
 
     Write-Host -ForegroundColor $Color -BackgroundColor Black "Play the note: $Note" 
     
-    # render the corresponding image file
-    $file = (get-item "C:\Users\JLP\Documents\Guitar\practice\diagrams\$($Note).png")
-    $img = [System.Drawing.Image]::Fromfile($file);
-    $pictureBox.Image = $img
+    If ($Diagrams) {
+        # render the corresponding image file
+        $file = (get-item "C:\Users\JLP\Documents\Guitar\practice\diagrams\$($Note).png")
+        $img = [System.Drawing.Image]::Fromfile($file);
+        $pictureBox.Image = $img
 
-    $Form.controls.add($pictureBox)
-    $Form.Topmost = $True
+        $Form.controls.add($pictureBox)
+        $Form.Topmost = $True
 
-    $rs = [Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace()
-    $rs.Open()
-    $rs.SessionStateProxy.SetVariable("Form", $Form)
-    $data = [hashtable]::Synchronized(@{text=""})
-    $rs.SessionStateProxy.SetVariable("data", $data)
-    $p = $rs.CreatePipeline({ [void] $Form.ShowDialog()})
-    $p.Input.Close()
-    $p.InvokeAsync()
+        $rs = [Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace()
+        $rs.Open()
+        $rs.SessionStateProxy.SetVariable("Form", $Form)
+        $data = [hashtable]::Synchronized(@{text=""})
+        $rs.SessionStateProxy.SetVariable("data", $data)
+        $p = $rs.CreatePipeline({ [void] $Form.ShowDialog()})
+        $p.Input.Close()
+        $p.InvokeAsync()
+    }
 
     $Note += $NoteDuration
 
